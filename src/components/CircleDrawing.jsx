@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import '../glow.css';
 
 const WIDTH = 500;
 const HEIGHT = 500;
@@ -44,6 +45,7 @@ const CircleDrawing = () => {
 	const [historyIndex, setHistoryIndex] = useState(0);
 	const [circleProgress, setCircleProgress] = useState(0);
 	const [animatingCircleIndex, setAnimatingCircleIndex] = useState(null);
+	const [showHistoryGlow, setShowHistoryGlow] = useState(true);
 	const containerRef = useRef(null);
 
 	const currentPoints = pointsHistory.slice(0, historyIndex);
@@ -183,61 +185,66 @@ const CircleDrawing = () => {
 				border: '1px solid #ccc',
 				borderRadius: 4,
 				overflow: 'hidden',
-				backgroundColor: '#fafafa',
+				backgroundColor: '#fff',
 				cursor: 'crosshair',
+				userSelect: 'none',
+				WebkitUserSelect: 'none',
+				MozUserSelect: 'none',
+				msUserSelect: 'none',
 			}}
 		>
 			<div
-				style={{
-					position: 'absolute',
-					top: 11,
-					right: 12,
-					display: 'flex',
-					gap: 6,
-					alignItems: 'center',
-					zIndex: 1,
-				}}
+				className={`segmented-glow-button simple-glow compact${!showHistoryGlow ? ' hide-orbit' : ''}`}
+				style={{ position: 'absolute', top: 11, right: 12, zIndex: 1 }}
 			>
-				<button
-					type="button"
-					onClick={(e) => {
-						e.stopPropagation();
-						setHistoryIndex((i) => Math.max(0, i - 1));
-						if (animatingCircleIndex !== null && historyIndex === 2 * (animatingCircleIndex + 1)) {
-							setAnimatingCircleIndex(null);
+				<div className="segment-container">
+					<button
+						type="button"
+						className={`segment ${!canUndo ? 'inactive' : ''}`}
+						onClick={(e) => {
+							e.stopPropagation();
+							if (!canUndo) return;
+							setShowHistoryGlow(false);
+							setHistoryIndex((i) => Math.max(0, i - 1));
+							if (animatingCircleIndex !== null && historyIndex === 2 * (animatingCircleIndex + 1)) {
+								setAnimatingCircleIndex(null);
+								setCircleProgress(0);
+							}
+						}}
+						disabled={!canUndo}
+					>
+						Undo
+					</button>
+					<button
+						type="button"
+						className={`segment ${!canRedo ? 'inactive' : ''}`}
+						onClick={(e) => {
+							e.stopPropagation();
+							if (!canRedo) return;
+							setShowHistoryGlow(false);
+							setHistoryIndex((i) => Math.min(pointsHistory.length, i + 1));
+						}}
+						disabled={!canRedo}
+					>
+						Redo
+					</button>
+					<button
+						type="button"
+						className={`segment ${!canReset ? 'inactive' : ''}`}
+						onClick={(e) => {
+							e.stopPropagation();
+							if (!canReset) return;
+							setShowHistoryGlow(false);
+							setPointsHistory([]);
+							setHistoryIndex(0);
 							setCircleProgress(0);
-						}
-					}}
-					disabled={!canUndo}
-					style={buttonStyle(canUndo)}
-				>
-					Undo
-				</button>
-				<button
-					type="button"
-					onClick={(e) => {
-						e.stopPropagation();
-						setHistoryIndex((i) => Math.min(pointsHistory.length, i + 1));
-					}}
-					disabled={!canRedo}
-					style={buttonStyle(canRedo)}
-				>
-					Redo
-				</button>
-				<button
-					type="button"
-					onClick={(e) => {
-						e.stopPropagation();
-						setPointsHistory([]);
-						setHistoryIndex(0);
-						setCircleProgress(0);
-						setAnimatingCircleIndex(null);
-					}}
-					disabled={!canReset}
-					style={{ ...buttonStyle(canReset), backgroundColor: '#e34242', borderRadius: 6, border: 'none' }}
-				>
-					Reset
-				</button>
+							setAnimatingCircleIndex(null);
+						}}
+						disabled={!canReset}
+					>
+						Reset
+					</button>
+				</div>
 			</div>
 			<svg width={WIDTH} height={HEIGHT} style={{ display: 'block', pointerEvents: 'none' }}>
 				<defs>
@@ -251,8 +258,8 @@ const CircleDrawing = () => {
 					>
 						<path
 							d={`M 0 0 L 0 ${GRID_CELL} M 0 0 L ${GRID_CELL} 0 M ${GRID_CELL} 0 L ${GRID_CELL} ${GRID_CELL} M 0 ${GRID_CELL} L ${GRID_CELL} ${GRID_CELL}`}
-							stroke="#e0e0e0"
-							strokeWidth="0.5"
+							stroke="#e6e6e6"
+							strokeWidth="1"
 							fill="none"
 						/>
 					</pattern>
@@ -261,21 +268,48 @@ const CircleDrawing = () => {
 					</clipPath>
 				</defs>
 				<rect width={WIDTH} height={HEIGHT} fill="url(#grid-circle)" />
-				<line x1={xAxisLeft} y1={centerY} x2={xAxisRight} y2={centerY} stroke="#333" strokeWidth={2} />
-				<line x1={centerX} y1={yAxisTop} x2={centerX} y2={yAxisBottom} stroke="#333" strokeWidth={2} />
+				<line x1={xAxisLeft} y1={centerY} x2={xAxisRight} y2={centerY} stroke="#999999" strokeWidth={2} />
+				<line x1={centerX} y1={yAxisTop} x2={centerX} y2={yAxisBottom} stroke="#999999" strokeWidth={2} />
+				{/* Axis labels */}
+				<text
+					x={valueToX(10)}
+					y={centerY - 12}
+					textAnchor="middle"
+					fontSize="14px"
+					fontWeight="bold"
+					fontStyle="italic"
+					fill="#999999"
+					fontFamily="'Latin Modern Roman CK12', 'Latin Modern Roman', serif"
+				>
+					x-axis
+				</text>
+				<text
+					x={centerX + 14}
+					y={yMax + 5}
+					textAnchor="start"
+					dominantBaseline="middle"
+					fontSize="14px"
+					fontWeight="bold"
+					fontStyle="italic"
+					fill="#999999"
+					fontFamily="'Latin Modern Roman CK12', 'Latin Modern Roman', serif"
+				>
+					y-axis
+				</text>
 				{tickValues.map((value) => {
 					const x = valueToX(value);
 					return (
 						<g key={`x-${value}`}>
-							<line x1={x} y1={centerY} x2={x} y2={centerY + 10} stroke="#333" strokeWidth={1.5} />
+							<line x1={x} y1={centerY} x2={x} y2={centerY + 10} stroke="#999999" strokeWidth={1.5} />
 							{value !== 0 && (
 								<text
 									x={x}
 									y={centerY + 26}
 									textAnchor="middle"
-									fontSize={14}
-									fill="#333"
-									fontFamily="system-ui, sans-serif"
+									fontSize="14px"
+									fontWeight="bold"
+									fill="#999999"
+									fontFamily="'Latin Modern Roman CK12', 'Latin Modern Roman', serif"
 								>
 									{value}
 								</text>
@@ -287,15 +321,16 @@ const CircleDrawing = () => {
 					const y = valueToY(value);
 					return (
 						<g key={`y-${value}`}>
-							<line x1={centerX} y1={y} x2={centerX - 10} y2={y} stroke="#333" strokeWidth={1.5} />
+							<line x1={centerX} y1={y} x2={centerX - 10} y2={y} stroke="#999999" strokeWidth={1.5} />
 							{value !== 0 && (
 								<text
 									x={centerX - 14}
 									y={y + 5}
 									textAnchor="end"
-									fontSize={14}
-									fill="#333"
-									fontFamily="system-ui, sans-serif"
+									fontSize="14px"
+									fontWeight="bold"
+									fill="#999999"
+									fontFamily="'Latin Modern Roman CK12', 'Latin Modern Roman', serif"
 								>
 									{value}
 								</text>
@@ -305,19 +340,19 @@ const CircleDrawing = () => {
 				})}
 				<polygon
 					points={`${xMax - arrowSize},${centerY - arrowSize} ${xMax},${centerY} ${xMax - arrowSize},${centerY + arrowSize}`}
-					fill="#333"
+					fill="#999999"
 				/>
 				<polygon
 					points={`${xMin + arrowSize},${centerY - arrowSize} ${xMin},${centerY} ${xMin + arrowSize},${centerY + arrowSize}`}
-					fill="#333"
+					fill="#999999"
 				/>
 				<polygon
 					points={`${centerX - arrowSize},${yMax + arrowSize} ${centerX},${yMax} ${centerX + arrowSize},${yMax + arrowSize}`}
-					fill="#333"
+					fill="#999999"
 				/>
 				<polygon
 					points={`${centerX - arrowSize},${yMin - arrowSize} ${centerX},${yMin} ${centerX + arrowSize},${yMin - arrowSize}`}
-					fill="#333"
+					fill="#999999"
 				/>
 
 				{/* Visible circles (full), no arrows; points drawn below */}
@@ -373,7 +408,7 @@ const CircleDrawing = () => {
 							cx={valueToX(p.x)}
 							cy={valueToY(p.y)}
 							r={POINT_RADIUS}
-							fill={pointIndex % 2 === 0 ? '#1967d2' : '#d32f2f'}
+							fill={pointIndex % 2 === 0 ? '#1967d2' : '#1967d2'}
 							stroke="#fff"
 							strokeWidth={2}
 						/>

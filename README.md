@@ -1,5 +1,7 @@
 # Circle Drawing Interactive
 
+**Live Site Link:** https://content-interactives.github.io/circle_drawing/
+
 A React single-page interactive for placing circles on a Cartesian coordinate plane. Users click **center** then **radius point** (integer lattice); the circle radius is the Euclidean distance between those two snapped grid points. Consecutive draws are supported with undo/redo, a sliding window of visible circles, and a short radius “grow” animation when a circle completes.
 
 ## Tech stack
